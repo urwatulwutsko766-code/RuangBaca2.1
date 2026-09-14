@@ -1,427 +1,1092 @@
 <!DOCTYPE html>
-
 <html lang="id">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RuangBaca</title>
+
 <!-- PDF.js: ekstraksi teks + render halaman PDF untuk OCR -->
-<script id="pdfjs-loader" src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs"
+        type="module" id="pdfjs-loader"></script>
+
 <!-- JSZip: membaca struktur EPUB -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <!-- Tesseract.js: OCR untuk PDF hasil scan/gambar -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
-<link href="css/style.css" rel="stylesheet"/>
-</head>
-<body>
-<div class="app">
-<header class="top">
-<h1 class="brand">Ruang<span>Baca</span></h1>
-<button class="profile-btn" onclick="showPage('profile')" type="button">R</button>
-</header>
-<main>
-<!-- =======================================================
-     HOME
-     ======================================================= -->
-<section class="page active" id="home">
-<p class="greeting">Selamat datang kembali 👋</p>
-<h2 class="page-title">Mau baca apa hari ini?</h2>
-<div class="search" id="searchBox">
-<span class="search-icon">⌕</span>
-<input autocomplete="off" id="searchInput" placeholder="Cari buku, penulis, atau isi..." type="search"/>
-<button class="search-clear" id="searchClear" type="button">×</button>
-</div>
-<div class="search-results" id="searchResults"></div>
-<div class="section-head">
-<h3>Lanjut membaca</h3>
-<button class="link-btn" onclick="showPage('library')">Lihat semua</button>
-</div>
-<article class="reading-card" onclick="openBookById('builtin-alchemist')">
-<div class="book-cover">
-<span class="cover-label">THE<br/>ALCHEMIST</span>
-</div>
-<div class="reading-info">
-<small>Paulo Coelho</small>
-<h3>The Alchemist</h3>
-<p>Bab 4 · 62% selesai</p>
-<div class="progress"><span></span></div>
-<div class="progress-row">
-<span>Halaman 128</span>
-<span>62%</span>
-</div>
-</div>
-</article>
-<div class="section-head" style="margin-top:28px">
-<h3>Rekomendasi</h3>
-<button class="link-btn" onclick="showPage('library')">Lihat semua</button>
-</div>
-<div class="book-grid" id="homeBooks"></div>
-</section>
-<!-- =======================================================
-     LIBRARY
-     ======================================================= -->
-<section class="page" id="library">
-<p class="greeting">Koleksi pribadi</p>
-<h2 class="page-title">Library</h2>
-<div class="library-tools">
-<div class="upload-box">
-<strong>Tambahkan buku</strong>
-<p>
-        Upload PDF, PDF scan/gambar, TXT, MD, HTML, DOCX, atau EPUB.
-        Teks akan diekstrak lalu dirapikan otomatis.
-      </p>
-<div class="upload-actions">
-<button class="primary-small" onclick="openFilePicker()">
-          Pilih file
-        </button>
-<button class="secondary-small" onclick="openAddBook()">
-          Manual
-        </button>
-</div>
-<input accept=".pdf,.txt,.md,.html,.htm,.epub,.docx,application/pdf,text/plain,text/markdown,text/html,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="file-input" id="bookFile" type="file"/>
-</div>
-<div class="import-status" id="importStatus"></div>
-</div>
-<div class="library-head">
-<button class="filter active" data-filter="all">Semua</button>
-<button class="filter" data-filter="reading">Sedang dibaca</button>
-<button class="filter" data-filter="done">Selesai</button>
-</div>
-<div class="book-grid" id="libraryBooks"></div>
-</section>
-<!-- =======================================================
-     PROFILE
-     ======================================================= -->
-<section class="page" id="profile">
-<p class="greeting">Akun kamu</p>
-<h2 class="page-title">Profile</h2>
-<div class="profile-card">
-<div class="big-avatar" id="bigAvatar">R</div>
-<h2 id="profileName">RuangBaca User</h2>
-<p id="profileSubtitle">Pembaca aktif</p>
-<div class="stats">
-<button class="stat stat-button" onclick="openAllBooksFromStats()" type="button">
-<strong id="bookCount">0</strong>
-<span>Buku</span>
-</button>
-<button class="stat stat-button" onclick="openFinishedBooksFromStats()" type="button">
-<strong id="doneCount">0</strong>
-<span>Selesai</span>
-</button>
-<button class="stat stat-button" onclick="openReadingTimeFromStats()" type="button">
-<strong id="readingHours">0h</strong>
-<span>Waktu baca</span>
-</button>
-</div>
-</div>
-<div class="settings">
-<button class="setting" onclick="openEditProfile()">
-<span>Edit profil</span>
-<small>›</small>
-</button>
-<button class="setting" onclick="toggleTheme()">
-<span>Tampilan</span>
-<small id="themeStatus">Terang</small>
-</button>
-<button class="setting" onclick="openReadingSettings()">
-<span>Pengaturan membaca</span>
-<small>›</small>
-</button>
-</div>
-</section>
-</main>
-<button aria-label="Upload buku" class="fab" onclick="openFilePicker()">+</button>
-<nav class="bottom">
-<button class="nav active" data-page="home">
-<span class="nav-icon">⌂</span>Home
-  </button>
-<button class="nav" data-page="library">
-<span class="nav-icon">▤</span>Library
-  </button>
-<button class="nav" data-page="profile">
-<span class="nav-icon">◯</span>Profile
-  </button>
-</nav>
-</div>
-<!-- =======================================================
-     READER — DISTRACTION FREE
-     Saat buku dibuka, fokus utama hanya isi buku.
-     Kontrol disembunyikan dan muncul saat layar disentuh.
-     ======================================================= -->
-<div class="reader-screen" id="readerModal">
-<div class="reader-topbar" id="readerTopbar">
-<button aria-label="Kembali" class="reader-back" onclick="closeModal('readerModal')">‹</button>
-<span class="reader-book-name" id="readerTitle">Membaca</span>
-<button aria-label="Menu pembaca" class="reader-menu" onclick="toggleReaderMenu()">⋯</button>
-</div>
-<!-- Menu titik tiga: pengaturan reader tanpa mengganggu halaman buku -->
-<div class="reader-menu-panel" id="readerMenuPanel">
-<button onclick="changeReaderFont(-1)">A −</button>
-<button onclick="changeReaderFont(1)">A +</button>
-<button onclick="toggleReaderTheme()">Tampilan</button>
-<button onclick="showTableOfContents()">Daftar isi</button>
-<button onclick="showBookmarks()">Bookmark</button>
-<button onclick="openNotes()">Catatan</button>
-<button onclick="runSmartRestructure()">Analisis &amp; rapikan</button>
-<button onclick="openReaderSettings()">Pengaturan tampilan</button>
-<button onclick="editCurrentBook()">Edit buku</button>
-<button onclick="deleteCurrentBookFinal()">Hapus buku</button>
-</div>
-<!-- Toolbar muncul hanya saat user menyeleksi teks -->
-<div class="selection-toolbar" id="selectionToolbar">
-<div class="toolbar-row">
-<button aria-label="Highlight kuning" onclick="highlightSelection('yellow')">🟨</button>
-<button aria-label="Highlight hijau" onclick="highlightSelection('green')">🟩</button>
-<button aria-label="Highlight biru" onclick="highlightSelection('blue')">🟦</button>
-<button aria-label="Highlight pink" onclick="highlightSelection('pink')">🩷</button>
-<button aria-label="Catatan pada highlight" onclick="noteSelectedText()">📝</button>
-</div>
-</div>
-<article class="clean-reader" id="readerContent">
-<div id="readerText"></div>
-</article>
-<div class="reader-bottom" id="readerBottom">
-<div class="reader-info" id="readerInfo"></div>
-<div class="reader-controls">
-<button class="reader-control secondary" id="readerPrev" onclick="readerPrev()">‹</button>
-<button class="reader-control bookmark" id="bookmarkButton" onclick="toggleBookmark()">
-        ☆
-      </button>
-<button class="reader-control primary" id="readerNext" onclick="readerNext()">›</button>
-</div>
-</div>
-</div>
-<!-- =======================================================
-     TAMBAH BUKU MANUAL
-     ======================================================= -->
-<div class="modal" id="addModal" onclick="outsideClose(event,'addModal')">
-<div class="modal-box">
-<div class="modal-head">
-<h3>Tambah buku</h3>
-<button class="close" onclick="closeModal('addModal')">×</button>
-</div>
-<div class="field">
-<label>Judul buku</label>
-<input id="newTitle" placeholder="Contoh: Laskar Pelangi"/>
-</div>
-<div class="field">
-<label>Penulis</label>
-<input id="newAuthor" placeholder="Nama penulis"/>
-</div>
-<div class="field">
-<label>Status</label>
-<select id="newStatus">
-<option value="unread">Belum dibaca</option>
-<option value="reading">Sedang dibaca</option>
-<option value="done">Selesai</option>
-</select>
-</div>
-<button class="action" onclick="addManualBook()">Simpan buku</button>
-</div>
-</div>
-<!-- =======================================================
-     EDIT PROFILE
-     ======================================================= -->
-<div class="modal" id="profileModal" onclick="outsideClose(event,'profileModal')">
-<div class="modal-box">
-<div class="modal-head">
-<h3>Edit profil</h3>
-<button class="close" onclick="closeModal('profileModal')">×</button>
-</div>
-<div class="field">
-<label>Nama</label>
-<input id="editName"/>
-</div>
-<div class="field">
-<label>Subtitle</label>
-<input id="editSubtitle"/>
-</div>
-<button class="action" onclick="saveProfile()">Simpan perubahan</button>
-</div>
-</div>
-<!-- =======================================================
-     READING SETTINGS
-     ======================================================= -->
-<div class="modal" id="settingsModal" onclick="outsideClose(event,'settingsModal')">
-<div class="modal-box">
-<div class="modal-head">
-<h3>Pengaturan membaca</h3>
-<button class="close" onclick="closeModal('settingsModal')">×</button>
-</div>
-<div class="field">
-<label>Ukuran teks reader</label>
-<select id="fontSize">
-<option value="normal">Normal</option>
-<option value="large">Besar</option>
-<option value="xlarge">Sangat besar</option>
-</select>
-</div>
-<button class="action" onclick="saveReadingSettings()">Simpan</button>
-</div>
-</div>
-<!-- =======================================================
-     PENGATURAN READER FINAL
-     ======================================================= -->
-<div class="reader-sheet" id="readerSettingsSheet" onclick="outsideSheet(event,'readerSettingsSheet')">
-<div class="reader-sheet-box reader-settings-box">
-<div class="reader-sheet-head">
-<h3>Pengaturan membaca</h3>
-<button class="close" onclick="closeSheet('readerSettingsSheet')">×</button>
-</div>
-<div class="manage-field">
-<label>Ukuran teks</label>
-<select id="readerSizeSetting">
-<option value="16">Kecil</option>
-<option value="18">Normal</option>
-<option value="20">Besar</option>
-<option value="22">Sangat besar</option>
-<option value="24">Ekstra besar</option>
-</select>
-</div>
-<div class="manage-field">
-<label>Jarak baris</label>
-<select id="readerLineSetting">
-<option value="1.5">Rapat</option>
-<option value="1.7">Normal</option>
-<option value="1.85">Nyaman</option>
-<option value="2.05">Lebar</option>
-</select>
-</div>
-<div class="manage-field">
-<label>Lebar halaman</label>
-<select id="readerWidthSetting">
-<option value="680">Lebar</option>
-<option value="620">Sedang</option>
-<option value="560">Sempit</option>
-</select>
-</div>
-<div class="manage-field">
-<label>Font</label>
-<select id="readerFontSetting">
-<option value="system">System</option>
-<option value="serif">Serif</option>
-<option value="sans">Sans</option>
-<option value="mono">Monospace</option>
-</select>
-</div>
-<div class="manage-field">
-<label>Latar reader</label>
-<select id="readerBgSetting">
-<option value="paper">Kertas</option>
-<option value="warm">Hangat</option>
-<option value="dark">Gelap</option>
-</select>
-</div>
-<button class="action" onclick="saveReaderSettingsFinal()">
-      Simpan pengaturan
-    </button>
-</div>
-</div>
-<!-- =======================================================
-     EDIT / KELOLA BUKU
-     ======================================================= -->
-<div class="manage-sheet" id="editBookSheet" onclick="outsideSheet(event,'editBookSheet')">
-<div class="manage-box">
-<div class="manage-head">
-<h3>Edit buku</h3>
-<button class="close" onclick="closeSheet('editBookSheet')">×</button>
-</div>
-<div class="manage-field">
-<label for="editBookTitle">Judul buku</label>
-<input id="editBookTitle" placeholder="Judul buku" type="text"/>
-</div>
-<div class="manage-field">
-<label for="editBookAuthor">Penulis</label>
-<input id="editBookAuthor" placeholder="Nama penulis" type="text"/>
-</div>
-<div class="manage-field">
-<label for="editBookStatus">Status</label>
-<select id="editBookStatus">
-<option value="unread">Belum dibaca</option>
-<option value="reading">Sedang dibaca</option>
-<option value="done">Selesai</option>
-</select>
-</div>
-<div class="manage-field">
-<label for="editBookGenre">Kategori / genre</label>
-<input id="editBookGenre" placeholder="Contoh: Bisnis" type="text"/>
-</div>
-<div class="manage-field">
-<label>File sumber</label>
-<input id="editBookFileName" readonly="" type="text"/>
-</div>
-<div class="manage-field">
-<label for="editBookText">Isi buku</label>
-<textarea id="editBookText" placeholder="Isi buku hasil extraction..."></textarea>
-</div>
-<div class="manage-actions">
-<button class="manage-cancel" onclick="closeSheet('editBookSheet')">
-        Batal
-      </button>
-<button class="manage-save" onclick="saveBookEdits()">
-        Simpan perubahan
-      </button>
-</div>
-<div class="delete-danger">
-<p class="delete-warning">
-        Kalau file yang di-upload salah, kamu bisa menghapus
-        buku ini beserta progress, bookmark, highlight, dan catatannya.
-      </p>
-<button onclick="deleteEditingBook()">
-        Hapus buku ini
-      </button>
-</div>
-</div>
-</div>
-<!-- ================= DAFTAR ISI ================= -->
-<div class="reader-sheet" id="tocSheet" onclick="outsideSheet(event,'tocSheet')">
-<div class="reader-sheet-box">
-<div class="reader-sheet-head">
-<h3>Daftar isi</h3>
-<button class="close" onclick="closeSheet('tocSheet')">×</button>
-</div>
-<div id="tocList"></div>
-</div>
-</div>
-<!-- ================= CATATAN ================= -->
-<div class="reader-sheet" id="notesSheet" onclick="outsideSheet(event,'notesSheet')">
-<div class="reader-sheet-box">
-<div class="reader-sheet-head">
-<h3>Catatan</h3>
-<button class="close" onclick="closeSheet('notesSheet')">×</button>
-</div>
-<textarea class="note-box" id="noteInput" placeholder="Tulis catatan untuk halaman ini..."></textarea>
-<button class="action" onclick="saveCurrentNote()">Simpan catatan</button>
-<div id="noteList"></div>
-</div>
-</div>
-<!-- =======================================================
-     PROCESSING OVERLAY
-     ======================================================= -->
-<div class="processing" id="processing">
-<div class="processing-box">
-<div class="spinner"></div>
-<strong id="processingTitle">Memproses...</strong>
-<p id="processingText" style="color:var(--muted);font-size:12px;line-height:1.5">
-      Tunggu sebentar.
-    </p>
-</div>
-</div>
-<div class="toast" id="toast"></div>
 
-<!-- RuangBaca modular system -->
+<style>
+/* =========================================================
+   RUANGBACA V2 — FUNDAMENTAL
+   1 file HTML untuk testing.
+   ========================================================= */
+
+:root{
+  --bg:#f6f5f1;
+  --card:#fff;
+  --text:#171717;
+  --muted:#77756f;
+  --line:#e7e4dd;
+  --accent:#2563eb;
+  --accent-soft:#eaf1ff;
+  --dark:#17191d;
+  --danger:#dc2626;
+}
+
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  min-height:100%;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+
+body.dark{
+  --bg:#111315;
+  --card:#1b1e22;
+  --text:#f5f5f5;
+  --muted:#a5a7ac;
+  --line:#30343a;
+  --accent-soft:#202e49;
+}
+
+button,input,select{font:inherit}
+
+button{
+  border:0;
+  cursor:pointer;
+  color:inherit;
+}
+
+.app{
+  width:100%;
+  max-width:540px;
+  min-height:100vh;
+  margin:auto;
+  padding-bottom:105px;
+}
+
+.top{
+  padding:22px 20px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.brand{
+  margin:0;
+  font-size:25px;
+  letter-spacing:-1px;
+  font-weight:850;
+}
+
+.brand span{font-weight:400}
+
+.profile-btn{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:var(--accent-soft);
+  color:var(--accent);
+  font-weight:800;
+}
+
+.page{
+  display:none;
+  padding:16px 20px 30px;
+}
+
+.page.active{display:block}
+
+.greeting{
+  margin:8px 0 3px;
+  color:var(--muted);
+  font-size:14px;
+}
+
+.page-title{
+  margin:0 0 20px;
+  font-size:30px;
+  letter-spacing:-1.2px;
+}
+
+.search{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:14px 16px;
+  margin-bottom:25px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+}
+
+.search-icon{
+  color:var(--muted);
+  font-size:20px;
+}
+
+.search input{
+  width:100%;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+}
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 13px;
+}
+
+.section-head h3{
+  margin:0;
+  font-size:18px;
+}
+
+.link-btn{
+  padding:6px 0;
+  background:none;
+  color:var(--accent);
+  font-size:13px;
+  font-weight:750;
+}
+
+.reading-card{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  min-height:178px;
+  padding:18px;
+  background:var(--dark);
+  color:white;
+  border-radius:22px;
+  cursor:pointer;
+}
+
+.book-cover{
+  flex:0 0 92px;
+  width:92px;
+  height:125px;
+  padding:11px;
+  border-radius:13px;
+  display:flex;
+  align-items:flex-end;
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(145deg,#4b5563,#111827);
+}
+
+.book-cover:before{
+  content:"";
+  position:absolute;
+  width:55px;
+  height:55px;
+  border-radius:50%;
+  top:-10px;
+  right:-10px;
+  background:rgba(255,255,255,.12);
+}
+
+.cover-label{
+  position:relative;
+  z-index:1;
+  font-size:12px;
+  line-height:1.2;
+  font-weight:800;
+}
+
+.reading-info{
+  min-width:0;
+  flex:1;
+}
+
+.reading-info small{color:#a9adb5}
+.reading-info h3{margin:5px 0 7px;font-size:18px}
+.reading-info p{margin:0 0 13px;color:#b8bbc1;font-size:12px}
+
+.progress{
+  height:5px;
+  overflow:hidden;
+  background:#3a3d43;
+  border-radius:10px;
+}
+
+.progress span{
+  display:block;
+  height:100%;
+  width:62%;
+  background:white;
+  border-radius:10px;
+}
+
+.progress-row{
+  display:flex;
+  justify-content:space-between;
+  margin-top:7px;
+  color:#a9adb5;
+  font-size:10px;
+}
+
+.book-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+
+.book-card{
+  min-width:0;
+  padding:10px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:18px;
+  cursor:pointer;
+}
+
+.book-card .book-cover{
+  width:100%;
+  height:185px;
+  margin-bottom:11px;
+}
+
+.book-card h4{
+  margin:0 2px 4px;
+  font-size:14px;
+}
+
+.book-card p{
+  margin:0 2px 4px;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.book-card small{
+  color:var(--accent);
+  font-size:10px;
+}
+
+.library-tools{
+  margin-bottom:18px;
+}
+
+.upload-box{
+  padding:18px;
+  background:var(--accent-soft);
+  border:1.5px dashed var(--accent);
+  border-radius:18px;
+}
+
+.upload-box strong{
+  display:block;
+  margin-bottom:5px;
+}
+
+.upload-box p{
+  margin:0 0 13px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.45;
+}
+
+.upload-actions{
+  display:flex;
+  gap:8px;
+}
+
+.primary-small,
+.secondary-small{
+  padding:10px 13px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.primary-small{
+  background:var(--accent);
+  color:white;
+}
+
+.secondary-small{
+  background:var(--card);
+  border:1px solid var(--line);
+}
+
+.file-input{display:none}
+
+.import-status{
+  display:none;
+  margin-top:10px;
+  padding:11px 13px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:12px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.4;
+}
+
+.import-status.show{display:block}
+
+.library-head{
+  display:flex;
+  gap:8px;
+  margin-bottom:18px;
+  overflow-x:auto;
+}
+
+.filter{
+  flex:0 0 auto;
+  padding:9px 14px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:999px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.filter.active{
+  background:var(--text);
+  border-color:var(--text);
+  color:var(--bg);
+}
+
+.profile-card{
+  padding:25px 20px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:22px;
+  text-align:center;
+}
+
+.big-avatar{
+  width:78px;
+  height:78px;
+  margin:auto;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:var(--accent-soft);
+  color:var(--accent);
+  font-size:27px;
+  font-weight:850;
+}
+
+.profile-card h2{margin:12px 0 3px}
+.profile-card > p{margin:0;color:var(--muted);font-size:13px}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid var(--line);
+}
+
+.stat strong{display:block;font-size:18px}
+.stat span{color:var(--muted);font-size:10px}
+
+.settings{
+  margin-top:15px;
+  overflow:hidden;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:18px;
+}
+
+.setting{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:17px;
+  background:var(--card);
+  border-bottom:1px solid var(--line);
+  text-align:left;
+}
+
+.setting:last-child{border-bottom:0}
+.setting small{color:var(--muted)}
+
+.bottom{
+  position:fixed;
+  z-index:50;
+  left:50%;
+  bottom:12px;
+  transform:translateX(-50%);
+  width:calc(100% - 24px);
+  max-width:516px;
+  padding:8px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:4px;
+  background:rgba(255,255,255,.94);
+  border:1px solid var(--line);
+  border-radius:20px;
+  box-shadow:0 10px 35px rgba(0,0,0,.1);
+  backdrop-filter:blur(16px);
+}
+
+body.dark .bottom{background:rgba(27,30,34,.95)}
+
+.nav{
+  padding:11px 6px;
+  border-radius:14px;
+  background:transparent;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+}
+
+.nav-icon{
+  display:block;
+  margin-bottom:3px;
+  font-size:18px;
+}
+
+.nav.active{
+  background:var(--text);
+  color:var(--bg);
+}
+
+.fab{
+  position:fixed;
+  z-index:45;
+  right:max(22px,calc((100vw - 540px)/2 + 22px));
+  bottom:92px;
+  width:50px;
+  height:50px;
+  border-radius:17px;
+  background:var(--accent);
+  color:white;
+  font-size:27px;
+  box-shadow:0 10px 25px rgba(37,99,235,.25);
+}
+
+/* ================= MODAL ================= */
+
+.modal{
+  position:fixed;
+  z-index:100;
+  inset:0;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:14px;
+  background:rgba(0,0,0,.5);
+}
+
+.modal.show{display:flex}
+
+.modal-box{
+  width:100%;
+  max-width:520px;
+  max-height:90vh;
+  overflow:auto;
+  padding:22px;
+  background:var(--card);
+  color:var(--text);
+  border-radius:24px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+
+.modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:18px;
+}
+
+.modal-head h3{
+  margin:0;
+  font-size:20px;
+}
+
+.close{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:var(--bg);
+  font-size:20px;
+}
+
+.field{margin-bottom:14px}
+
+.field label{
+  display:block;
+  margin-bottom:7px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.field input,
+.field select{
+  width:100%;
+  padding:13px;
+  outline:0;
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid var(--line);
+  border-radius:12px;
+}
+
+.action{
+  width:100%;
+  padding:14px;
+  margin-top:8px;
+  border-radius:14px;
+  background:var(--accent);
+  color:white;
+  font-weight:750;
+}
+
+.action.secondary{
+  background:var(--bg);
+  color:var(--text);
+}
+
+.reader-content{
+  max-height:56vh;
+  overflow:auto;
+  padding:3px 2px;
+}
+
+.reader-content h4{
+  margin:0 0 15px;
+  font-size:20px;
+  line-height:1.35;
+}
+
+.reader-content p{
+  margin:0;
+  white-space:pre-wrap;
+  line-height:1.8;
+}
+
+.reader-info{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:11px;
+  text-align:center;
+}
+
+.reader-controls{
+  display:flex;
+  gap:8px;
+}
+
+.reader-controls .action{flex:1}
+
+.processing{
+  position:fixed;
+  z-index:300;
+  inset:0;
+  display:none;
+  place-items:center;
+  padding:24px;
+  background:rgba(0,0,0,.55);
+}
+
+.processing.show{display:grid}
+
+.processing-box{
+  width:100%;
+  max-width:360px;
+  padding:25px;
+  background:var(--card);
+  border-radius:22px;
+  text-align:center;
+}
+
+.spinner{
+  width:32px;
+  height:32px;
+  margin:0 auto 14px;
+  border:3px solid var(--line);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toast{
+  position:fixed;
+  z-index:400;
+  left:50%;
+  bottom:95px;
+  transform:translate(-50%,20px);
+  opacity:0;
+  pointer-events:none;
+  padding:13px 18px;
+  background:#171717;
+  color:white;
+  border-radius:14px;
+  font-size:12px;
+  transition:.2s;
+  white-space:nowrap;
+}
+
+.toast.show{
+  opacity:1;
+  transform:translate(-50%,0);
+}
+
+.empty{
+  grid-column:1/-1;
+  padding:32px 15px;
+  border:1px dashed var(--line);
+  border-radius:18px;
+  color:var(--muted);
+  text-align:center;
+}
+
+@media(max-width:380px){
+  .book-card .book-cover{height:160px}
+  .reading-card{gap:12px;padding:14px}
+  .reading-card .book-cover{
+    flex-basis:78px;
+    width:78px;
+    height:112px;
+  }
+}
+
+/* =========================================================
+   CLEAN READER
+   Tidak memakai card/modal biasa.
+   Buku mengambil seluruh layar agar fokus hanya membaca.
+   ========================================================= */
+
+.reader-screen{
+  position:fixed;
+  z-index:500;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  background:var(--card);
+  color:var(--text);
+}
+
+.reader-screen.show{
+  display:flex;
+}
+
+.reader-topbar{
+  flex:0 0 auto;
+  height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 14px;
+  background:var(--card);
+  border-bottom:1px solid var(--line);
+  transition:opacity .2s, transform .2s;
+}
+
+.reader-book-name{
+  min-width:0;
+  flex:1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  text-align:center;
+  font-size:13px;
+  font-weight:650;
+}
+
+.reader-back,
+.reader-menu{
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:var(--bg);
+  font-size:25px;
+  display:grid;
+  place-items:center;
+}
+
+.reader-menu{
+  font-size:22px;
+}
+
+.clean-reader{
+  flex:1;
+  width:100%;
+  max-width:720px;
+  margin:auto;
+  padding:30px 25px 90px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+.clean-reader p{
+  margin:0;
+  color:var(--text);
+  font-size:var(--reader-size,18px);
+  line-height:1.85;
+  letter-spacing:.01em;
+  white-space:pre-wrap;
+  text-align:left;
+}
+
+.reader-bottom{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  padding:10px 16px 14px;
+  background:linear-gradient(
+    to bottom,
+    transparent,
+    var(--card) 28%
+  );
+  transition:opacity .2s, transform .2s;
+}
+
+.reader-info{
+  margin:0 0 7px;
+  color:var(--muted);
+  font-size:11px;
+  text-align:center;
+}
+
+.reader-controls{
+  display:flex;
+  gap:8px;
+  max-width:520px;
+  margin:auto;
+}
+
+.reader-control{
+  width:48px;
+  height:44px;
+  border-radius:14px;
+  background:var(--bg);
+  color:var(--text);
+  font-size:24px;
+}
+
+.reader-control.primary{
+  margin-left:auto;
+  background:var(--accent);
+  color:white;
+}
+
+.reader-control.secondary{
+  margin-right:auto;
+}
+
+.reader-control.bookmark{
+  font-size:20px;
+}
+
+.reader-screen.controls-hidden .reader-topbar,
+.reader-screen.controls-hidden .reader-bottom{
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(10px);
+}
+
+.reader-screen.controls-hidden .reader-topbar{
+  transform:translateY(-10px);
+}
+
+@media(min-width:700px){
+  .clean-reader{
+    padding-left:42px;
+    padding-right:42px;
+  }
+}
+/* =========================================================
+   READER MENU + HIGHLIGHT + E-READER LAYOUT
+   ========================================================= */
+
+.reader-menu-panel{
+  position:absolute;
+  z-index:8;
+  top:65px;
+  right:14px;
+  width:190px;
+  padding:7px;
+  display:none;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:0 14px 35px rgba(0,0,0,.16);
+}
+
+.reader-menu-panel.show{
+  display:block;
+}
+
+.reader-menu-panel button{
+  width:100%;
+  padding:11px 12px;
+  background:transparent;
+  border-radius:10px;
+  color:var(--text);
+  text-align:left;
+  font-size:12px;
+}
+
+.reader-menu-panel button:active{
+  background:var(--bg);
+}
+
+.selection-toolbar{
+  position:absolute;
+  z-index:12;
+  left:50%;
+  bottom:82px;
+  transform:translateX(-50%);
+  display:none;
+  padding:5px;
+  background:var(--dark);
+  border-radius:13px;
+  box-shadow:0 10px 30px rgba(0,0,0,.2);
+}
+
+.selection-toolbar.show{
+  display:block;
+}
+
+.selection-toolbar button{
+  padding:9px 14px;
+  background:transparent;
+  color:white;
+  font-weight:750;
+  font-size:12px;
+}
+
+.clean-reader{
+  scrollbar-width:thin;
+}
+
+#readerText{
+  width:100%;
+}
+
+.reader-paragraph{
+  margin:0 0 1.25em;
+}
+
+.reader-heading{
+  margin:0 0 1.2em;
+  font-size:1.2em;
+  line-height:1.4;
+  font-weight:800;
+}
+
+.reader-page-number{
+  margin:0 0 22px;
+  color:var(--muted);
+  font-size:11px;
+  text-align:center;
+}
+
+.reader-highlight{
+  background:#ffe88a;
+  color:inherit;
+  border-radius:3px;
+  padding:0 1px;
+}
+
+body.dark .reader-highlight{
+  background:#665b24;
+}
 
 
 
 
+/* =========================================================
+   DARK MODE READER — FIX
+   Warna teks reader dikunci mengikuti variable tema.
+   ========================================================= */
+
+.reader-screen{
+  background:var(--card) !important;
+  color:var(--text) !important;
+}
+
+.reader-screen .clean-reader,
+.reader-screen #readerText,
+.reader-screen .reader-paragraph,
+.reader-screen .reader-heading{
+  color:var(--text) !important;
+}
+
+body.dark .reader-screen{
+  background:#111315 !important;
+  color:#f5f5f5 !important;
+}
+
+body.dark .reader-screen .clean-reader,
+body.dark .reader-screen #readerText,
+body.dark .reader-screen .reader-paragraph,
+body.dark .reader-screen .reader-heading{
+  color:#f5f5f5 !important;
+}
+
+.reader-paragraph{
+  font-size:var(--reader-size,18px);
+}
+
+.reader-heading{
+  color:var(--text) !important;
+}
 
 
+/* Statistik Profile sekarang benar-benar bisa ditekan,
+   tanpa mengubah tampilan visualnya. */
+.stat-button{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:inherit;
+  padding:0;
+  margin:0;
+  text-align:center;
+  cursor:pointer;
+}
 
-<script src="js/01-core.js"></script><script src="js/02-final-patch.js"></script><script src="js/03-search-patch.js"></script><script src="js/04-migration.js"></script><script src="js/05-hardening.js"></script></body>
-</html>
+.stat-button:active{
+  transform:scale(.96);
+}
+
+.stat-button:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:4px;
+  border-radius:8px;
+}
 
 
+/* ================= SEARCH RESULTS ================= */
+.search{position:relative}
+.search-clear{
+  display:none;width:28px;height:28px;flex:0 0 28px;
+  border:0;border-radius:50%;background:var(--bg);
+  color:var(--muted);font-size:16px
+}
+.search.has-value .search-clear{display:block}
+.search-results{
+  display:none;margin:-15px 0 24px;overflow:hidden;
+  background:var(--card);border:1px solid var(--line);
+  border-radius:16px
+}
+.search-results.show{display:block}
+.search-result{
+  width:100%;display:flex;align-items:center;gap:12px;
+  padding:13px;background:var(--card);color:var(--text);
+  border:0;border-bottom:1px solid var(--line);text-align:left
+}
+.search-result:last-child{border-bottom:0}
+.search-result:active{background:var(--bg)}
+.search-result-cover{
+  flex:0 0 42px;width:42px;height:54px;padding:6px;
+  display:flex;align-items:flex-end;overflow:hidden;
+  border-radius:7px;background:linear-gradient(145deg,#4b5563,#111827);
+  color:#fff;font-size:7px;font-weight:800
+}
+.search-result-info{min-width:0;flex:1}
+.search-result-info strong,.search-result-info small{
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.search-result-info strong{font-size:13px}
+.search-result-info small{margin-top:3px;color:var(--muted);font-size:11px}
+.search-empty{padding:18px;color:var(--muted);font-size:12px;text-align:center}
+
+/* ================= READER TOOLS ================= */
+.highlight-colors{display:flex;gap:7px;padding:9px 10px;border-bottom:1px solid var(--line)}
+.highlight-color{
+  width:28px;height:28px;padding:0;border-radius:50%;
+  border:2px solid transparent
+}
+.highlight-color.yellow{background:#ffe88a}
+.highlight-color.green{background:#b7f0bd}
+.highlight-color.blue{background:#b9dcff}
+.highlight-color.pink{background:#ffc1d6}
+.reader-highlight.yellow{background:#ffe88a;color:inherit}
+.reader-highlight.green{background:#b7f0bd;color:inherit}
+.reader-highlight.blue{background:#b9dcff;color:inherit}
+.reader-highlight.pink{background:#ffc1d6;color:inherit}
+body.dark .reader-highlight.yellow{background:#665b24}
+body.dark .reader-highlight.green{background:#285b31}
+body.dark .reader-highlight.blue{background:#244b70}
+body.dark .reader-highlight.pink{background:#6b3048}
+
+/* ================= TOC / NOTES ================= */
+.reader-sheet{
+  position:fixed;z-index:620;inset:0;display:none;
+  align-items:flex-end;justify-content:center;padding:14px;
+  background:rgba(0,0,0,.55)
+}
+.reader-sheet.show{display:flex}
+.reader-sheet-box{
+  width:100%;max-width:520px;max-height:80vh;overflow:auto;
+  padding:20px;background:var(--card);color:var(--text);
+  border-radius:22px
+}
+.reader-sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.reader-sheet-head h3{margin:0;font-size:18px}
+.toc-item{
+  width:100%;padding:13px 3px;background:transparent;
+  color:var(--text);border:0;border-bottom:1px solid var(--line);
+  text-align:left
+}
+.toc-item small{display:block;margin-top:3px;color:var(--muted)}
+.note-box{
+  width:100%;min-height:120px;resize:vertical;padding:13px;
+  outline:0;background:var(--bg);color:var(--text);
+  border:1px solid var(--line);border-radius:12px
+}
+.note-item{
+  padding:12px;margin-bottom:8px;background:var(--bg);
+  border-radius:12px;font-size:12px;line-height:1.5
+}
+.note-item small{display:block;margin-top:5px;color:var(--muted)}
 
 
-        
+/* =========================================================
+   BOOK MANAGEMENT
+   ========================================================= */
+
+.book-card{
+  position:relative;
+}
+
+.book-card-actions{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+.book-card-actions button{
+  flex:1;
+  min-height:36px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:var(--bg);
+  color:var(--text);
+  border:1px solid var(--line);
+  font-size:12px;
+}
+
+.book-card-actions .book-edit{
+  color:var(--accent);
+}
+
+.book-car
